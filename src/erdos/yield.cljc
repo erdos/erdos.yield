@@ -1,7 +1,5 @@
 (ns erdos.yield)
 
-(set! *warn-on-reflection* true)
-
 (defn- quoted? [x] (boolean (and (seq? x) ('#{quote clojure.core/quote} (first x)))))
 
 (defn- walk [inner outer form]
@@ -44,8 +42,6 @@
   (when (= (first e) 'yield)
     (assert (= 2 (count e)))
     (second e)))
-
-; (declare rewrite)
 
 (defmulti rewrite (fn [e] (when (seq? e) (first e))))
 
