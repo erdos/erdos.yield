@@ -30,11 +30,13 @@ For example, `(gen-seq (yield 1) (yield 2))` will return `(1 2)`. A more complex
  (yield "End."))
 ```
 
-Outputs:
+Returns:
 
 ```Clojure
 (0 1 2 "Hello" \G \r \e \e \t \i \n \g \s \3 \2 \1 "End.")
 ```
+
+See the [test cases](https://github.com/erdos/erdos.yield/blob/master/test/erdos/yield_test.clj) for more examples.
 
 Use `(yield-all xs)` instead of `(doseq [x xs] (yield x))` to set multiple elements in the sequence.
 
