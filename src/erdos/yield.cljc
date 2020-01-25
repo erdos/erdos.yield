@@ -37,14 +37,6 @@
            e))))
    form))
 
-;; for each partition: pred is true for the last item
-(defn- part-last [pred coll]
-  (lazy-seq
-   (when-let [s (seq coll)]
-     (let [run (take-while (complement pred) s)
-           run (take (inc (count run)) s)]
-       (cons run (part-last pred (drop (count run) s)))))))
-
 (defn with-yield-meta [e] (with-meta e {:yield true}))
 
 (defn yield? [e]
