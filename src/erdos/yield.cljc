@@ -82,8 +82,17 @@
 (defmethod rewrite 'if [[_ cond then else]]
   (let [then (rewrite then)
         else (rewrite else)]
-    (cond-> `(if ~cond ~then ~else)
-      (or (rewritten? then) (rewritten? else)) (with-yield-meta))))
+    (if-not (or (rewritten? then) (rewritten? else))
+      (list 'if cond then else)
+      (with-yield-meta
+        (list 'if
+              cond
+              (if (rewritten? then)
+                then
+                (list 'do then nil))
+              (if (rewritten? else)
+                else
+                (list 'do else nil)))))))
 
 (defmethod rewrite 'let* [[_ bindings & bodies]]
   (let [body (rewrite (cons 'do bodies))]

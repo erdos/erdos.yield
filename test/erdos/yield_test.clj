@@ -37,3 +37,20 @@
                 (loop [i 0]
                   (yield i)
                   (recur (inc i))))))))
+
+
+(deftest infinite-seq
+  (is (= (range 10)
+         (take 10
+               (gen-seq
+                (loop [i 0]
+                  (yield i)
+                  (recur (inc i))))))))
+
+(deftest test-if
+  (is (= '(:even :even :even)
+         (gen-seq
+          (doseq [i (range 5)]
+            (if (even? i)
+              (yield :even)
+              (list 1 2 3)))))))
