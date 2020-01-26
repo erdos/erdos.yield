@@ -104,6 +104,25 @@
     (cond-> `(letfn* ~bindings ~body)
       (rewritten? body) (with-yield-meta))))
 
+(defmethod rewrite 'case* [[_ e shift mask default m & args]]
+  (let [e (rewrite e)
+        default (rewrite default)
+
+        {:keys [any-clause-rewritten]
+         m :result}
+        (reduce (fn [acc [minhash [c then]]]
+                  (let [then (rewrite then)]
+                    (cond-> acc
+                      true (assoc-in [:result minhash] [c then])
+                      (rewritten? then) (assoc :any-clause-rewritten true))))
+                {:any-clause-rewritten false
+                 :result {}}
+                m)]
+    (cond-> `(case* ~e ~shift ~mask ~default ~m ~@args)
+      (or (rewritten? e)
+          (rewritten? default)
+          any-clause-rewritten) (with-yield-meta))))
+
 (defmethod rewrite 'yield [e]
   (assert (= 2 (count e)) "Call to (yield ..) must have 1 parameter!")
   (with-yield-meta (list 'list (second e))))
