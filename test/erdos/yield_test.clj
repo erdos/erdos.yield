@@ -72,3 +72,20 @@
             (if (even? i)
               (yield :even)
               (list 1 2 3)))))))
+
+(deftest test-case
+  (is (= '(:default :odd :even :odd :even)
+         (gen-seq
+          (doseq [i (range 5)]
+            (case i
+              1 (yield :odd)
+              2 (list 1 2 3)
+              3 (yield :odd)
+              4 (list 1 2 3)
+              (yield :default))
+            (case i
+              1 (list 1 2 3)
+              2 (yield :even)
+              3 (list 1 2 3)
+              4 (yield :even)
+              (list 1 2 3)))))))

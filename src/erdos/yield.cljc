@@ -105,22 +105,31 @@
       (rewritten? body) (with-yield-meta))))
 
 (defmethod rewrite 'case* [[_ e shift mask default m & args]]
-  (let [e (rewrite e)
-        default (rewrite default)
+  (let [default (rewrite default)
 
         {:keys [any-clause-rewritten]
          m :result}
         (reduce (fn [acc [minhash [c then]]]
                   (let [then (rewrite then)]
-                    (cond-> acc
-                      true (assoc-in [:result minhash] [c then])
-                      (rewritten? then) (assoc :any-clause-rewritten true))))
+                    (if (rewritten? then)
+                      (-> acc
+                          (assoc-in [:result minhash] [c then])
+                          (assoc :any-clause-rewritten true))
+                      (assoc-in acc
+                                [:result minhash]
+                                [c `(do ~then nil)]))))
                 {:any-clause-rewritten false
                  :result {}}
                 m)]
-    (cond-> `(case* ~e ~shift ~mask ~default ~m ~@args)
-      (or (rewritten? e)
-          (rewritten? default)
+    (cond-> `(case* ~e
+                    ~shift
+                    ~mask
+                    ~(if (rewritten? default)
+                       default
+                       `(do ~default nil))
+                    ~m
+                    ~@args)
+      (or (rewritten? default)
           any-clause-rewritten) (with-yield-meta))))
 
 (defmethod rewrite 'yield [e]
