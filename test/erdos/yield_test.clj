@@ -30,6 +30,24 @@
             (yield j)
             (yield k))))))
 
+(deftest support-case
+  (is (= '(0 1 2 3 4 5 6)
+         (let [f (fn [x]
+                   (gen-seq
+                    (case x
+                      :one-two-three (do
+                                       (yield 1)
+                                       (yield 2)
+                                       (yield 3))
+                      :four-five-six (do
+                                       (yield 4)
+                                       (yield 5)
+                                       (yield 6))
+                      (yield 0))))]
+           (mapcat f '(:zero
+                       :one-two-three
+                       :four-five-six))))))
+
 (deftest infinite-seq
   (is (= (range 10)
          (take 10
