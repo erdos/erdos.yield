@@ -47,6 +47,11 @@
 
 (defmethod rewrite :default [e] e)
 
+;; retunrs a (lazy seq) pair of (concat-vals return-value)
+(defmulti rewrite-val (fn [e] (when (seq? e) (first e))))
+
+(defmethod rewrite-val :default [e] `[nil ~e])
+
 (defn rewritten? [e] (-> e meta :yield boolean))
 
 (defmethod rewrite 'do [[do & bodies]]
@@ -61,6 +66,22 @@
                               (if (rewritten? r)
                                 (list 'lazy-seq r)
                                 (list 'lazy-seq (list do r nil)))))))))))
+
+(defmethod rewrite-val 'do [[do & bodies]]
+  (assert (= 'do do))
+  (let [rr (map rewrite (butlast bodies))
+        r0 (rewrite-val (last bodies))]
+    (if-not (or (rewritten? r0) (some rewritten? rr))
+          `(do ~@bodies nil)
+      (with-yield-meta
+        (case (count rr)
+          0 r0
+          1 `(let [xs#     ~@rr
+                   [a# b#] ~r0]
+               [[xs# a#] b#])
+          `(let [xs#     (doall (concat ~@rr))
+                 [a# b#] ~r0]
+             [(concat xs [a#]) b#]))))))
 
 (def ^:dynamic *loop-id*)
 
@@ -82,6 +103,37 @@
 (defmethod rewrite 'if [[_ cond then else]]
   (let [then (rewrite then)
         else (rewrite else)]
+    (if-not (or (rewritten? then) (rewritten? else))
+      (list 'if cond then else)
+      (with-yield-meta
+        (list 'if
+              cond
+              (if (rewritten? then)
+                then
+                (list 'do then nil))
+              (if (rewritten? else)
+                else
+                (list 'do else nil)))))))
+
+;;
+(defmethod rewrite-val 'if [[_ cond then else]]
+  (let [rewritten-cond (rewrite-val cond)
+        then           (rewrite-val then)
+        else           (rewrite-val else)]
+    (if-not (some rewritten? [rewritten-cond then else]))
+    (if (rewritten? cond)
+      `(let [[cc# r#] ~rewritten-cond]
+          (if r#
+              (let [[tc# tr#] ~then]
+                [(concat cc# tc#) tr#])
+              (let [[ec# er#] ~else]
+                [(concat cc# ec#) er#])))
+      `(if ~cond
+          (let [[tc# tr#] ~then]
+            [(concat cc# tc#) tr#])
+          (let [[ec# er#] ~else]
+            [(concat cc# ec#) er#])))
+
     (if-not (or (rewritten? then) (rewritten? else))
       (list 'if cond then else)
       (with-yield-meta
@@ -135,6 +187,12 @@
 (defmethod rewrite 'yield [e]
   (assert (= 2 (count e)) "Call to (yield ..) must have 1 parameter!")
   (with-yield-meta (list 'list (second e))))
+
+(defmethod rewrite-val 'yield [e]
+  (assert (= 2 (count e)) "Call to (yield ..) must have 1 parameter!")
+  (with-yield-meta
+    `(let* [l# ~(second e)]
+       [[l#] l#])))
 
 (defmethod rewrite 'yield-all [e]
   (assert (= 2 (count e)) "Call to (yield-all ..) must have 1 parameter!")

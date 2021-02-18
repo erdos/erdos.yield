@@ -89,3 +89,7 @@
               3 (list 1 2 3)
               4 (yield :even)
               (list 1 2 3)))))))
+
+
+(deftest sdf
+  (println (rewrite-val '(do (yield 1) (yield 2)))))
